@@ -1,0 +1,1 @@
+# Local MySQL only (do NOT install on Render): pip install mysqlclient
