@@ -313,12 +313,19 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
+    wants_json = ('application/json' in request.headers.get('Accept', '')
+                  or request.headers.get('X-Requested-With') == 'XMLHttpRequest')
     if request.method == 'POST':
         form = AvatarForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
+            if wants_json:
+                u = request.user
+                return JsonResponse({'ok': True, 'avatar': u.avatar.url if u.avatar else ''})
             messages.success(request, 'Profile updated!')
             return redirect('users:profile')
+        if wants_json:
+            return JsonResponse({'ok': False, 'errors': form.errors.get_json_data()}, status=400)
     else:
         form = AvatarForm(instance=request.user)
     return render(request, 'users/profile.html', {'user': request.user, 'form': form})

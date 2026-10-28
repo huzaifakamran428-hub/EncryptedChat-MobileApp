@@ -20,10 +20,39 @@ from .encryption import encrypt_message, decrypt_message
 User = get_user_model()
 MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5 GB
 
+VOICE_EXTS = {'m4a', 'mp4', 'aac', 'mp3', 'wav', 'ogg', 'oga', 'webm', 'caf', 'opus', '3gp', 'amr'}
+
+
+def _safe_size(f):
+    """File size as text. Returns '' if the file no longer exists on disk
+    (Render's disk is wiped on redeploy) instead of crashing the whole request."""
+    try:
+        return format_size(f.size)
+    except Exception:
+        return ''
+
+
+def _voice_ext(blob):
+    """Keep the real audio format: phones record m4a/aac, browsers record webm/ogg."""
+    orig = os.path.splitext(blob.name or '')[1].lstrip('.').lower()
+    if orig in VOICE_EXTS:
+        return orig
+    ct = (blob.content_type or '').lower()
+    if 'mp4' in ct or 'm4a' in ct or 'aac' in ct:
+        return 'm4a'
+    if 'ogg' in ct:
+        return 'ogg'
+    if 'wav' in ct:
+        return 'wav'
+    if 'mpeg' in ct or 'mp3' in ct:
+        return 'mp3'
+    return 'webm'
+
+
 
 def get_file_type(name):
     ext = (name.split('.')[-1] if '.' in name else '').lower()
-    if ext in ['jpg','jpeg','png','gif','webp','bmp','svg']: return 'image'
+    if ext in ['jpg','jpeg','png','gif','webp','bmp','svg','heic','heif']: return 'image'
     if ext in ['mp4','webm','mov','avi','mkv','flv','wmv','m4v']: return 'video'
     if ext in ['mp3','wav','ogg','aac','flac','m4a']: return 'audio'
     if ext == 'pdf': return 'pdf'
@@ -280,8 +309,7 @@ def upload_voice_view(request):
     receiver  = get_object_or_404(User, username=recv_name)
     blob      = request.FILES.get('voice')
     if not blob: return JsonResponse({'error': 'No audio'}, status=400)
-    ct = blob.content_type or 'audio/webm'
-    ext = 'ogg' if 'ogg' in ct else 'webm'
+    ext = _voice_ext(blob)
     blob.name = f'voice_{uuid.uuid4().hex}.{ext}'
     msg = Message(sender=request.user, receiver=receiver, file_name=blob.name, file_type='voice')
     msg.set_message('')
@@ -303,8 +331,7 @@ def upload_group_voice_view(request, group_id):
         return JsonResponse({'error': 'Not a member'}, status=403)
     blob = request.FILES.get('voice')
     if not blob: return JsonResponse({'error': 'No audio'}, status=400)
-    ct = blob.content_type or 'audio/webm'
-    ext = 'ogg' if 'ogg' in ct else 'webm'
+    ext = _voice_ext(blob)
     blob.name = f'voice_{uuid.uuid4().hex}.{ext}'
     msg = GroupMessage(group=group, sender=request.user, file_name=blob.name, file_type='voice')
     msg.set_message('')
@@ -792,7 +819,7 @@ def poll_new_messages_view(request, username):
             entry['file_url'] = msg.file.url
             entry['file_name'] = msg.file_name or ''
             entry['file_type'] = msg.file_type or 'document'
-            entry['file_size'] = format_size(msg.file.size) if msg.file else ''
+            entry['file_size'] = _safe_size(msg.file)
             entry['message'] = ''
         else:
             entry['message'] = msg.message_content
@@ -829,7 +856,7 @@ def poll_new_group_messages_view(request, group_id):
             entry['file_url'] = msg.file.url
             entry['file_name'] = msg.file_name or ''
             entry['file_type'] = msg.file_type or 'document'
-            entry['file_size'] = format_size(msg.file.size) if msg.file else ''
+            entry['file_size'] = _safe_size(msg.file)
             entry['message'] = ''
         else:
             entry['message'] = msg.message_content

@@ -4,6 +4,10 @@ import os
 mimetypes.add_type("audio/webm", ".webm")
 mimetypes.add_type("audio/ogg", ".ogg")
 mimetypes.add_type("audio/ogg", ".oga")
+mimetypes.add_type("audio/mp4", ".m4a")
+mimetypes.add_type("audio/aac", ".aac")
+mimetypes.add_type("audio/wav", ".wav")
+mimetypes.add_type("audio/amr", ".amr")
 
 """
 Django settings for chatapp project.
@@ -127,6 +131,14 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
+
+# ── Permanent file storage (optional) ────────────────────────────────────────
+# Render's free disk is wiped on every deploy/restart, so avatars, pictures and
+# voice notes would disappear. If CLOUDINARY_URL is set (free Cloudinary account),
+# uploads are stored there instead and survive redeploys.
+if os.environ.get("CLOUDINARY_URL"):
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
+    STORAGES["default"] = {"BACKEND": "cloudinary_storage.storage.RawMediaCloudinaryStorage"}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

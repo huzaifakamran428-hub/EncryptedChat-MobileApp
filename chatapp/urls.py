@@ -1,9 +1,9 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from chat.media import serve_media
 from django.views.generic import RedirectView
 from django.http import HttpResponseForbidden
 from django.conf import settings
-from django.conf.urls.static import static
 
 
 def disabled_admin_view(request):
@@ -20,4 +20,6 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('chat/', include('chat.urls')),
     path('', RedirectView.as_view(url='/chat/', permanent=False)),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Uploaded files (avatars, pictures, voice notes). Works with DEBUG=False.
+    re_path(r'^media/(?P<path>.*)$', serve_media),
+]
