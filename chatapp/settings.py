@@ -161,7 +161,11 @@ ANYMAIL = {
     "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", ""),
 }
 
-DEFAULT_FROM_EMAIL = "ChatApp <noreply@huzaifakamran.site>"
+# Set DEFAULT_FROM_EMAIL on Render to change the sender. While your domain is not
+# verified in Resend, use: ChatApp <onboarding@resend.dev>
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", "ChatApp <noreply@huzaifakamran.site>"
+)
 
 EMAIL_TIMEOUT = 10
 OTP_EXPIRY_MINUTES = 10
